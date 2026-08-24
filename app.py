@@ -1,4 +1,5 @@
 import streamlit as st
+import time
 
 # ==========================================
 # 1. OPPSETT OG DELT MINNE
@@ -6,7 +7,6 @@ import streamlit as st
 st.set_page_config(page_title="Hannes Kø", layout="centered")
 
 
-# Delt minne på tvers av alle brukere
 @st.cache_resource
 def get_shared_state():
     return {
@@ -33,7 +33,7 @@ st.title("🪪 Hannes Køsystem")
 visning = st.sidebar.radio("Velg visning:", ["Kølapp (Kollega)", "Hannes Kontrollpanel"])
 
 # ==========================================
-# 3. FORSIDE FOR KOLLEGAER
+# 3. FORSIDE FOR KOLLEGAER (MED AUTO-OPPDATERING)
 # ==========================================
 if visning == "Kølapp (Kollega)":
     st.markdown(
@@ -49,11 +49,9 @@ if visning == "Kølapp (Kollega)":
     min_aktive_lapp = next((p for p in state["ko"] if p["nr"] == st.session_state["min_lapp_nr"]), None)
 
     if min_aktive_lapp:
-        # Hvis de har en lapp, får de ikke trekke ny
         st.warning(
             f"✋ Du har allerede trukket lapp **#{min_aktive_lapp['nr']}**! Vennligst vent på tur (eller til Hanne sletter deg).")
     else:
-        # Hvis de ikke har en aktiv lapp, kan de trekke en
         st.subheader("Trekk en kølapp")
         with st.form("trekk_lapp_form"):
             navn = st.text_input("Ditt navn")
@@ -64,7 +62,6 @@ if visning == "Kølapp (Kollega)":
             if innsendt:
                 if navn:
                     state["lapp_nr"] += 1
-                    # Lagrer nummeret i brukerens personlige nettleserminne
                     st.session_state["min_lapp_nr"] = state["lapp_nr"]
 
                     state["ko"].append({
@@ -74,19 +71,22 @@ if visning == "Kølapp (Kollega)":
                         "emne": emne
                     })
                     st.success(f"Du har fått kølapp **#{state['lapp_nr']}**!")
-                    st.rerun()  # Oppdaterer siden for å skjule skjemaet
+                    st.rerun()
                 else:
                     st.error("Vennligst fyll ut navnet ditt.")
 
     # ==========================================
     # 4. SKAMMEKROKEN (AVVISTE SAKER)
     # ==========================================
-    # Viser listen over henvendelser som er slettet/hoppet over
     if state["skipped"]:
         st.divider()
         st.subheader("🗑️ Nådeløst avvist av Hanne")
-        for avvist in reversed(state["skipped"]):  # Viser de sist avviste øverst
+        for avvist in reversed(state["skipped"]):
             st.error(f"~~Lapp #{avvist['nr']} — {avvist['navn']} ({avvist['kategori']})~~")
+
+    # AUTO-OPPDATERING KUN PÅ FORSIDEN: Venter 5 sekunder og oppdaterer skiltet
+    time.sleep(5)
+    st.rerun()
 
 
 # ==========================================
@@ -96,6 +96,7 @@ elif visning == "Hannes Kontrollpanel":
     st.header("👩‍💼 Hannes Dashboard")
     passord = st.text_input("Skriv inn passord for å åpne", type="password")
 
+    # Bytt ut "hanne123" med det passordet dere ønsker
     if passord == "hanne123":
         st.success("Passord godkjent!")
         st.caption("Her kan du lese hva folk lurer på og bedømme hvor viktig det er.")
@@ -111,18 +112,14 @@ elif visning == "Hannes Kontrollpanel":
                     if person["emne"]:
                         st.write(f"_{person['emne']}_")
 
-                    # Deler knappene i to kolonner
                     kol1, kol2 = st.columns(2)
 
-                    # Knapp 1: Rop opp
                     if kol1.button("✅ Rop opp denne!", key=f"rop_{person['nr']}", use_container_width=True):
                         state["now_serving"] = person["nr"]
                         state["ko"] = [p for p in state["ko"] if p["nr"] != person["nr"]]
                         st.rerun()
 
-                    # Knapp 2: Hopp over / Slett
                     if kol2.button("🚫 Avvis", key=f"slett_{person['nr']}", use_container_width=True):
-                        # Fjerner fra køen og legger i 'skipped'-listen
                         state["ko"] = [p for p in state["ko"] if p["nr"] != person["nr"]]
                         state["skipped"].append(person)
                         st.rerun()
