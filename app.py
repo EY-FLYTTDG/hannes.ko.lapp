@@ -1,20 +1,36 @@
 import streamlit as st
 import time
+import json
+import os
 
 # ==========================================
-# 1. OPPSETT OG DELT MINNE
+# 1. OPPSETT, JSON OG DELT MINNE
 # ==========================================
 st.set_page_config(page_title="Hannes Kø", layout="centered")
+
+JSON_FIL = "hannes_logg.json"
+
+
+# Funksjon for å lagre alt til fil
+def lagre_til_json(state_dict):
+    with open(JSON_FIL, "w", encoding="utf-8") as f:
+        json.dump(state_dict, f, ensure_ascii=False, indent=4)
 
 
 @st.cache_resource
 def get_shared_state():
+    # Prøver å laste inn tidligere lagret logg
+    if os.path.exists(JSON_FIL):
+        with open(JSON_FIL, "r", encoding="utf-8") as f:
+            return json.load(f)
+
+    # Hvis filen ikke finnes, start med blanke ark
     return {
         "ko": [],
         "now_serving": 0,
         "lapp_nr": 0,
-        "skipped": [],  # Liste for henvendelser Hanne har slettet
-        "sist_sjekket": time.time()  # Lagrer tidspunktet for sist sjekk
+        "skipped": [],
+        "sist_sjekket": time.time()
     }
 
 
@@ -24,13 +40,11 @@ minutter_per_person = 5
 # ==========================================
 # 2. ANTI-SPAM (LOKALT MINNE)
 # ==========================================
-# Husker brukeren i deres egen nettleser for å hindre at de trekker flere lapper
 if "min_lapp_nr" not in st.session_state:
     st.session_state["min_lapp_nr"] = None
 
 st.title("🪪 Hannes Køsystem")
 
-# Valg i sidemenyen for å skille visningene
 visning = st.sidebar.radio("Velg visning:", ["Kølapp (Kollega)", "Hannes Kontrollpanel"])
 
 # ==========================================
@@ -51,7 +65,6 @@ if visning == "Kølapp (Kollega)":
 
     st.divider()
 
-    # Sjekk om brukeren allerede har en lapp som fortsatt står i køen
     min_aktive_lapp = next((p for p in state["ko"] if p["nr"] == st.session_state["min_lapp_nr"]), None)
 
     if min_aktive_lapp:
@@ -76,6 +89,7 @@ if visning == "Kølapp (Kollega)":
                         "kategori": kategori,
                         "emne": emne
                     })
+                    lagre_til_json(state)  # Lagrer endringen til JSON
                     st.success(f"Du har fått kølapp **#{state['lapp_nr']}**!")
                     st.rerun()
                 else:
@@ -90,7 +104,6 @@ if visning == "Kølapp (Kollega)":
         for avvist in reversed(state["skipped"]):
             st.error(f"~~Lapp #{avvist['nr']} — {avvist['navn']} ({avvist['kategori']})~~")
 
-    # AUTO-OPPDATERING KUN PÅ FORSIDEN: Venter 5 sekunder og oppdaterer skiltet
     time.sleep(5)
     st.rerun()
 
@@ -102,11 +115,11 @@ elif visning == "Hannes Kontrollpanel":
     st.header("👩‍💼 Hannes Dashboard")
     passord = st.text_input("Skriv inn passord for å åpne", type="password")
 
-    # Bytt ut "hanne123" med det passordet dere ønsker
     if passord == "hanne123":
 
-        # Oppdaterer klokken hver gang hun ser på sakene
+        # Oppdaterer klokken hver gang hun ser på sakene og lagrer det
         state["sist_sjekket"] = time.time()
+        lagre_til_json(state)
 
         st.success("Passord godkjent!")
         st.caption("Her kan du lese hva folk lurer på og bedømme hvor viktig det er.")
@@ -116,7 +129,6 @@ elif visning == "Hannes Kontrollpanel":
         else:
             for person in list(state["ko"]):
                 with st.container(border=True):
-                    # Oppdatert fargesjekk med nøyaktig samme store og små bokstaver som i skjemaet
                     farge = "🔴" if person["kategori"] == "Swada" else "🟡" if person["kategori"] == "Ensom" else "🟢"
                     st.markdown(f"**Lapp #{person['nr']} — {person['navn']}** {farge} ({person['kategori'].upper()})")
 
@@ -128,11 +140,13 @@ elif visning == "Hannes Kontrollpanel":
                     if kol1.button("✅ Rop opp denne!", key=f"rop_{person['nr']}", use_container_width=True):
                         state["now_serving"] = person["nr"]
                         state["ko"] = [p for p in state["ko"] if p["nr"] != person["nr"]]
+                        lagre_til_json(state)  # Lagrer endringen til JSON
                         st.rerun()
 
                     if kol2.button("🚫 Avvis", key=f"slett_{person['nr']}", use_container_width=True):
                         state["ko"] = [p for p in state["ko"] if p["nr"] != person["nr"]]
                         state["skipped"].append(person)
+                        lagre_til_json(state)  # Lagrer endringen til JSON
                         st.rerun()
 
     elif passord:
