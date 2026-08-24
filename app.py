@@ -41,7 +41,7 @@ if visning == "Kølapp (Kollega)":
         unsafe_allow_html=True)
 
     estimert_tid = len(state["ko"]) * minutter_per_person
-    st.info(f"⏱️ Estimert ventetid til Hanne er ledig: **{estimert_tid} minutter** ({len(state['ko'])} i kø)")
+    st.info(f"⏱️ Estimert ventetid til Hanne er ledig: +- 1t **{estimert_tid} minutter** ({len(state['ko'])} i kø)")
 
     st.divider()
 
@@ -55,7 +55,7 @@ if visning == "Kølapp (Kollega)":
         st.subheader("Trekk en kølapp")
         with st.form("trekk_lapp_form"):
             navn = st.text_input("Ditt navn")
-            kategori = st.selectbox("Hva gjelder det?", ["viktig jobb", "ensom", "swada"])
+            kategori = st.selectbox("Hva gjelder det?", ["Ensom","viktig jobb", "Swada"])
             emne = st.text_area("Utdyp kort (valgfritt)")
             innsendt = st.form_submit_button("Trekk lapp 🎟️")
 
