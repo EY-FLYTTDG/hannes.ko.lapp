@@ -13,7 +13,8 @@ def get_shared_state():
         "ko": [],
         "now_serving": 0,
         "lapp_nr": 0,
-        "skipped": []  # Liste for henvendelser Hanne har slettet
+        "skipped": [],  # Liste for henvendelser Hanne har slettet
+        "sist_sjekket": time.time()  # Lagrer tidspunktet for sist sjekk
     }
 
 
@@ -36,6 +37,11 @@ visning = st.sidebar.radio("Velg visning:", ["Kølapp (Kollega)", "Hannes Kontro
 # 3. FORSIDE FOR KOLLEGAER (MED AUTO-OPPDATERING)
 # ==========================================
 if visning == "Kølapp (Kollega)":
+
+    # Regner ut antall minutter og viser teksten
+    minutter_siden = int((time.time() - state["sist_sjekket"]) / 60)
+    st.caption(f"👀 Hanne sjekket dashbordet sist for **{minutter_siden} minutter** siden.")
+
     st.markdown(
         f"<h1 style='text-align: center; color: red; font-size: 3.5rem;'>NOW SERVING: #{state['now_serving']}</h1>",
         unsafe_allow_html=True)
@@ -55,7 +61,7 @@ if visning == "Kølapp (Kollega)":
         st.subheader("Trekk en kølapp")
         with st.form("trekk_lapp_form"):
             navn = st.text_input("Ditt navn")
-            kategori = st.selectbox("Hva gjelder det?", ["Ensom","viktig jobb", "Swada"])
+            kategori = st.selectbox("Hva gjelder det?", ["Ensom", "viktig jobb", "Swada"])
             emne = st.text_area("Utdyp kort (valgfritt)")
             innsendt = st.form_submit_button("Trekk lapp 🎟️")
 
@@ -98,6 +104,10 @@ elif visning == "Hannes Kontrollpanel":
 
     # Bytt ut "hanne123" med det passordet dere ønsker
     if passord == "hanne123":
+
+        # Oppdaterer klokken hver gang hun ser på sakene
+        state["sist_sjekket"] = time.time()
+
         st.success("Passord godkjent!")
         st.caption("Her kan du lese hva folk lurer på og bedømme hvor viktig det er.")
 
@@ -106,7 +116,8 @@ elif visning == "Hannes Kontrollpanel":
         else:
             for person in list(state["ko"]):
                 with st.container(border=True):
-                    farge = "🔴" if person["kategori"] == "swada" else "🟡" if person["kategori"] == "ensom" else "🟢"
+                    # Oppdatert fargesjekk med nøyaktig samme store og små bokstaver som i skjemaet
+                    farge = "🔴" if person["kategori"] == "Swada" else "🟡" if person["kategori"] == "Ensom" else "🟢"
                     st.markdown(f"**Lapp #{person['nr']} — {person['navn']}** {farge} ({person['kategori'].upper()})")
 
                     if person["emne"]:
