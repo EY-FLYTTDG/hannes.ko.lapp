@@ -41,7 +41,7 @@ if visning == "Kølapp (Kollega)":
         unsafe_allow_html=True)
 
     estimert_tid = len(state["ko"]) * minutter_per_person
-    st.info(f"⏱️ Estimert ventetid til Hanne er ledig: +- 1t **{estimert_tid} minutter** ({len(state['ko'])} i kø)")
+    st.info(f"⏱️ Estimert ventetid til Hanne er ledig: **{estimert_tid} minutter** ({len(state['ko'])} i kø +- 1t )")
 
     st.divider()
 
